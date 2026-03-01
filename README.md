@@ -2,7 +2,7 @@
 
 A retro demoscene intro built three ways from one design:
 
-- **JS6** -- hand-written JavaScript in imperative C style. No frameworks, no classes, no
+- **JS6** -- vanilla JavaScript in imperative C style. No frameworks, no classes, no
   build step. Just flat arrays, `putpixel`, and `requestAnimationFrame`. Runs in any browser.
 - **C-Version (WASM)** -- the exact same C source files that run on bare-metal hardware,
   compiled to WebAssembly with Emscripten. One codebase, two targets: a Zephyr RTOS board
@@ -15,8 +15,19 @@ the browser. Both produce the same demo -- stars, fire, checkerboard floor, logo
 convergence, and a chrome sine scroller -- but from completely different codebases that
 share the same architecture.
 
+## Quick Start
+
+```sh
+./scripts/setup.sh          # install dependencies (Emscripten, Pillow)
+./scripts/build.sh           # build WASM
+./scripts/serve.sh           # start dev server, opens browser
+```
+
+Or using make: `make setup && make build && make serve`
+
 ## Contents
 
+- [Quick Start](#quick-start)
 - [Two Codebases, One Architecture](#two-codebases-one-architecture)
 - [What You See](#what-you-see)
 - [From putpixel to Demo: A Walkthrough](#from-putpixel-to-demo-a-walkthrough)
@@ -288,12 +299,13 @@ from keeping the platform bridge thin.
 
 ### JS6 (browser -- no build step)
 
-No build step required. Serve the project root with any static HTTP server:
+No build step required:
 
 ```sh
-cd em-intro
-python3 -m http.server 8000
+./scripts/serve.sh
 ```
+
+Or manually: `python3 -m http.server 8000` from the project root.
 
 Open `http://localhost:8000` in a browser. The demo starts in JS6 mode by default. Use
 the toggle tabs above the screen to switch between the JS6 and C-Version (WASM)
@@ -311,7 +323,17 @@ The same C source files that run on bare-metal Zephyr are compiled to WebAssembl
 wrapper code, no separate browser port -- the actual `fire.c`, `stars.c`, `logo.c`, etc.
 are fed to `emcc` and the platform bridge in `graph.c` handles the rest.
 
-1. **Install Emscripten** (if not already done):
+**Using the scripts (recommended):**
+
+```sh
+./scripts/setup.sh       # installs Emscripten SDK into emsdk/ (gitignored)
+./scripts/build.sh       # compiles C to WASM
+./scripts/serve.sh       # starts dev server, opens browser
+```
+
+**Or manually:**
+
+1. Install Emscripten (if not already done):
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
@@ -319,7 +341,7 @@ cd emsdk && ./emsdk install latest && ./emsdk activate latest
 source ./emsdk_env.sh
 ```
 
-2. **Build with make:**
+2. Build with make:
 
 ```sh
 cd zephyr
@@ -328,7 +350,7 @@ make -f Makefile.web
 
 This produces `web/demo.js` and `web/demo.wasm`.
 
-3. **Run:** Serve the project root the same way as JS6. Click the **C-Version (WASM)**
+3. Run: Serve the project root the same way as JS6. Click the **C-Version (WASM)**
 tab above the screen, or navigate directly to `http://localhost:8000?mode=wasm`. The C
 code runs as WebAssembly at near-native speed, using `requestAnimationFrame` for 60fps
 frame pacing.
