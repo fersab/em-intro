@@ -6,6 +6,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT=8000
 
+die() { echo "error: $*" >&2; exit 1; }
+
+if ! command -v python3 &>/dev/null; then
+    die "python3 not found. Run ./scripts/setup.sh first."
+fi
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --port) PORT="$2"; shift ;;
@@ -18,6 +24,11 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+# Check if port is available
+if ! python3 -c "import socket; s=socket.socket(); s.bind(('',${PORT})); s.close()" 2>/dev/null; then
+    die "Port $PORT is already in use. Try: $0 --port 9000"
+fi
 
 URL="http://localhost:$PORT"
 echo "Serving em-intro at $URL"

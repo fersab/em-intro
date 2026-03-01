@@ -17,7 +17,7 @@ activate_emsdk() {
     local emsdk_dir="${EMSDK:-$ROOT/emsdk}"
     if [[ -f "$emsdk_dir/emsdk_env.sh" ]]; then
         # shellcheck disable=SC1091
-        source "$emsdk_dir/emsdk_env.sh" 2>/dev/null
+        source "$emsdk_dir/emsdk_env.sh" || die "Failed to source emsdk_env.sh"
         return 0
     fi
     die "emcc not found. Run ./scripts/setup.sh first."
@@ -28,7 +28,10 @@ activate_emsdk() {
 build_wasm() {
     echo "==> Building WASM"
     activate_emsdk
-    make -C "$ZDIR" -f Makefile.web
+    make -C "$ZDIR" -f Makefile.web || die "WASM build failed. Check emcc with: emcc --version"
+    if [[ ! -f "$ZDIR/web/demo.wasm" ]]; then
+        die "Build completed but demo.wasm not found"
+    fi
     echo ""
 }
 
@@ -47,7 +50,7 @@ build_zephyr() {
     if ! has west; then
         die "west not found. Install Zephyr SDK: https://docs.zephyrproject.org/latest/develop/getting_started/"
     fi
-    west build -b stm32h747i_disco/stm32h747xx/m7 "$ZDIR"
+    west build -b stm32h747i_disco/stm32h747xx/m7 "$ZDIR" || die "Zephyr build failed"
     echo ""
 }
 
