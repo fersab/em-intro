@@ -2,9 +2,6 @@
 
 A retro demoscene intro that runs in the browser and on bare metal -- same effects, two platforms.
 
-## Preview
-
-*[screenshot here]*
 
 ## What You See
 
