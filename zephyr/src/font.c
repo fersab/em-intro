@@ -1,0 +1,269 @@
+// --- procedural demoscene chrome font ---
+//
+// Generates chunky angular bitmap glyphs at init time.
+// Each character is defined on a 5x7 cell grid, then scaled up
+// and filled with a chrome gradient (steel-blue -> bright -> copper).
+// All glyphs are pre-rendered into a flat atlas for fast blitting.
+
+#include "font.h"
+#include "graph.h"
+
+// --- font state ---
+static uint16_t font_grad[FONT_GLYPH_H];
+static uint16_t font_atlas[FONT_ATLAS_W * FONT_GLYPH_H];
+
+// glyph bitmaps: 64 chars * 7 rows, indexed as (ch - FONT_FIRST) * FONT_GH
+// 5 bits per row, MSB = left column
+static const uint8_t font_map[FONT_COUNT * FONT_GH] = {
+    // space (32)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ! (33)
+    0x04, 0x04, 0x04, 0x04, 0x04, 0x00, 0x04,
+    // " (34)
+    0x0A, 0x0A, 0x0A, 0x00, 0x00, 0x00, 0x00,
+    // # (35)
+    0x0A, 0x1F, 0x0A, 0x0A, 0x1F, 0x0A, 0x00,
+    // $ (36)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // % (37)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // & (38)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ' (39)
+    0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ( (40)
+    0x02, 0x04, 0x08, 0x08, 0x08, 0x04, 0x02,
+    // ) (41)
+    0x08, 0x04, 0x02, 0x02, 0x02, 0x04, 0x08,
+    // * (42)
+    0x00, 0x04, 0x15, 0x0E, 0x15, 0x04, 0x00,
+    // + (43)
+    0x00, 0x04, 0x04, 0x1F, 0x04, 0x04, 0x00,
+    // , (44)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x08,
+    // - (45)
+    0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00,
+    // . (46)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+    // / (47)
+    0x01, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10,
+    // 0 (48)
+    0x1F, 0x11, 0x13, 0x15, 0x19, 0x11, 0x1F,
+    // 1 (49)
+    0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x1F,
+    // 2 (50)
+    0x1F, 0x01, 0x01, 0x1F, 0x10, 0x10, 0x1F,
+    // 3 (51)
+    0x1F, 0x01, 0x01, 0x1F, 0x01, 0x01, 0x1F,
+    // 4 (52)
+    0x11, 0x11, 0x11, 0x1F, 0x01, 0x01, 0x01,
+    // 5 (53)
+    0x1F, 0x10, 0x10, 0x1F, 0x01, 0x01, 0x1F,
+    // 6 (54)
+    0x1F, 0x10, 0x10, 0x1F, 0x11, 0x11, 0x1F,
+    // 7 (55)
+    0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08,
+    // 8 (56)
+    0x1F, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x1F,
+    // 9 (57)
+    0x1F, 0x11, 0x11, 0x1F, 0x01, 0x01, 0x1F,
+    // : (58)
+    0x00, 0x00, 0x04, 0x00, 0x04, 0x00, 0x00,
+    // ; (59)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // < (60)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // = (61)
+    0x00, 0x00, 0x1F, 0x00, 0x1F, 0x00, 0x00,
+    // > (62)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ? (63)
+    0x1F, 0x11, 0x01, 0x06, 0x04, 0x00, 0x04,
+    // @ (64)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // A (65)
+    0x1F, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11,
+    // B (66)
+    0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E,
+    // C (67)
+    0x1F, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F,
+    // D (68)
+    0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E,
+    // E (69)
+    0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F,
+    // F (70)
+    0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10,
+    // G (71)
+    0x1F, 0x10, 0x10, 0x17, 0x11, 0x11, 0x1F,
+    // H (72)
+    0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11,
+    // I (73)
+    0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1F,
+    // J (74)
+    0x1F, 0x01, 0x01, 0x01, 0x01, 0x11, 0x1F,
+    // K (75)
+    0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11,
+    // L (76)
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F,
+    // M (77)
+    0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11,
+    // N (78)
+    0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11,
+    // O (79)
+    0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F,
+    // P (80)
+    0x1F, 0x11, 0x11, 0x1F, 0x10, 0x10, 0x10,
+    // Q (81)
+    0x1F, 0x11, 0x11, 0x11, 0x15, 0x12, 0x1F,
+    // R (82)
+    0x1F, 0x11, 0x11, 0x1F, 0x14, 0x12, 0x11,
+    // S (83)
+    0x1F, 0x10, 0x10, 0x1F, 0x01, 0x01, 0x1F,
+    // T (84)
+    0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
+    // U (85)
+    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F,
+    // V (86)
+    0x11, 0x11, 0x11, 0x11, 0x0A, 0x0A, 0x04,
+    // W (87)
+    0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11,
+    // X (88)
+    0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11,
+    // Y (89)
+    0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04,
+    // Z (90)
+    0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F,
+    // [ (91)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // backslash (92)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ] (93)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ^ (94)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // _ (95)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,
+};
+
+// --- gradient helpers ---
+
+// brighten (amt > 0) or darken (amt < 0) an RGB565 color by amt units
+static uint16_t font_adjust(uint16_t c, int amt)
+{
+    int r = (((c >> 11) & 0x1F) << 3) + amt;
+    int g = (((c >> 5) & 0x3F) << 2) + amt;
+    int b = ((c & 0x1F) << 3) + amt;
+    if (r < 0) r = 0; if (r > 255) r = 255;
+    if (g < 0) g = 0; if (g > 255) g = 255;
+    if (b < 0) b = 0; if (b > 255) b = 255;
+    return rgb565((uint8_t)r, (uint8_t)g, (uint8_t)b);
+}
+
+// build chrome gradient lookup table for each glyph scanline
+static void font_build_gradient(void)
+{
+    // chrome: steel-blue top -> bright highlight -> warm copper bottom
+    static const float stop_t[7] = { 0.00f, 0.20f, 0.38f, 0.45f, 0.55f, 0.75f, 1.00f };
+    static const float stop_r[7] = {   40,    80,   170,   230,   200,   160,    80 };
+    static const float stop_g[7] = {   50,   100,   180,   225,   170,   120,    55 };
+    static const float stop_b[7] = {  110,   170,   210,   220,   100,    60,    30 };
+
+    for (int y = 0; y < FONT_GLYPH_H; y++) {
+        float t = (float)y / (float)(FONT_GLYPH_H - 1);
+
+        // find enclosing stops
+        int si = 0;
+        for (int s = 1; s < 7; s++) {
+            if (stop_t[s] >= t) { si = s - 1; break; }
+        }
+
+        float lt = (t - stop_t[si]) / (stop_t[si + 1] - stop_t[si]);
+        float r = stop_r[si] + (stop_r[si + 1] - stop_r[si]) * lt;
+        float g = stop_g[si] + (stop_g[si + 1] - stop_g[si]) * lt;
+        float b = stop_b[si] + (stop_b[si + 1] - stop_b[si]) * lt;
+
+        // scanline groove: dim every other row for textured chrome look
+        if (y & 1) {
+            r *= 0.82f;
+            g *= 0.82f;
+            b *= 0.82f;
+        }
+
+        font_grad[y] = rgb565((uint8_t)r, (uint8_t)g, (uint8_t)b);
+    }
+}
+
+// rasterize all glyphs into a flat atlas with chrome gradient and bevel
+static void font_render_atlas(void)
+{
+    for (int ci = 0; ci < FONT_COUNT; ci++) {
+        int base = ci * FONT_GH;
+        int ox = ci * FONT_GLYPH_W;
+
+        for (int gy = 0; gy < FONT_GH; gy++) {
+            uint8_t row = font_map[base + gy];
+            if (row == 0) continue;
+
+            // rows above/below for bevel detection
+            uint8_t row_above = (gy > 0) ? font_map[base + gy - 1] : 0;
+            uint8_t row_below = (gy < FONT_GH - 1) ? font_map[base + gy + 1] : 0;
+
+            for (int gx = 0; gx < FONT_GW; gx++) {
+                uint8_t bit = 1 << (FONT_GW - 1 - gx);
+                if (!(row & bit)) continue;
+
+                int is_top = !(row_above & bit);
+                int is_bot = !(row_below & bit);
+
+                int px_x = ox + gx * FONT_SCALE;
+                for (int py = 0; py < FONT_SCALE; py++) {
+                    int ay = gy * FONT_SCALE + py;
+                    uint16_t color = font_grad[ay];
+
+                    // bevel: bright top edge, dark bottom edge
+                    if (is_top && py == 0) {
+                        color = font_adjust(color, 50);
+                    }
+                    if (is_bot && py == FONT_SCALE - 1) {
+                        color = font_adjust(color, -40);
+                    }
+
+                    for (int px = 0; px < FONT_SCALE; px++) {
+                        font_atlas[ay * FONT_ATLAS_W + px_x + px] = color;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// build gradient, define chars, render atlas — call once at startup
+void font_init(void)
+{
+    font_build_gradient();
+    font_render_atlas();
+}
+
+// blit one character from atlas to framebuffer at (x, y)
+void font_draw_char(int code, int x, int y)
+{
+    // map lowercase to uppercase
+    if (code >= 97 && code <= 122) code -= 32;
+    if (code < FONT_FIRST || code >= FONT_FIRST + FONT_COUNT) return;
+
+    int ox = (code - FONT_FIRST) * FONT_GLYPH_W;
+
+    for (int gy = 0; gy < FONT_GLYPH_H; gy++) {
+        int sy = y + gy;
+        if ((unsigned)sy >= SCREEN_H) continue;
+        int fb_row = sy * SCREEN_W;
+        int atlas_row = gy * FONT_ATLAS_W + ox;
+        for (int gx = 0; gx < FONT_GLYPH_W; gx++) {
+            uint16_t c = font_atlas[atlas_row + gx];
+            if (c == 0) continue;
+            int sx = x + gx;
+            if ((unsigned)sx >= SCREEN_W) continue;
+            fb_back[fb_row + sx] = c;
+        }
+    }
+}

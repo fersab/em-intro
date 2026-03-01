@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EM Intro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hint">Press play below to hear some nice chiptunes</div>
+  <div class="monitor">
+    <div class="vents">
+      <div class="vent"></div>
+      <div class="vent"></div>
+      <div class="vent"></div>
+      <div class="vent"></div>
+      <div class="vent"></div>
+    </div>
+    <div class="bezel">
+      <canvas id="screen"></canvas>
+    </div>
+    <div class="mod-player" id="mod-player">
+      <button class="mod-btn" id="mod-playpause">&#9654;</button>
+      <div class="mod-lcd">
+        <div class="mod-title" id="mod-title">Loading...</div>
+        <div class="mod-seek-row">
+          <input class="mod-seek" id="mod-seek" type="range" min="0" max="1000" value="0">
+          <span class="mod-time" id="mod-time">0:00</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="brand">RETROCOMPUTER 500</span>
+      <div class="led-row">
+        <span class="led-label">PWR</span>
+        <div class="led"></div>
+        <span class="led-label">DRV</span>
+        <div class="led-drive"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script>var libopenmpt = { locateFile: function(s) { return 'lib/' + s; } };</script>
+  <script src="lib/libopenmpt.js"></script>
+  <script src="lib/chiptune2.js"></script>
+
+  <!-- demo -->
+  <script src="main.js"></script>
+  <script src="graph.js"></script>
+  <script src="font.js"></script>
+  <script src="sprite.js"></script>
+  <script src="floor.js"></script>
+  <script src="fire.js"></script>
+  <script src="stars.js"></script>
+  <script src="logo.js"></script>
+  <script src="scroller.js"></script>
+  <script src="mod.js"></script>
+  <script>main_start();</script>
+</body>
+</html>

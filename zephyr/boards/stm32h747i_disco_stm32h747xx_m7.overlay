@@ -1,0 +1,12 @@
+#include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
+
+/*
+ * SDRAM2: 32 MB at 0xD0000000
+ * - zephyr,memory-region creates linker MEMORY region "SDRAM2"
+ * - non-cacheable MPU attribute needed for LTDC DMA coherency
+ */
+&sdram2 {
+    status = "okay";
+    zephyr,memory-region = "SDRAM2";
+    zephyr,memory-attr = <( DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE) )>;
+};
