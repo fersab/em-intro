@@ -281,7 +281,28 @@ canvas {
 .readme strong {
   color: #d8d0e8;
 }
+.readme ul, .readme ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
 .readme li {
-  margin: 4px 0 4px 20px;
+  margin: 4px 0;
+}
+.readme ul li {
   list-style: disc;
+}
+.readme ol li {
+  list-style: decimal;
+}
+.readme a {
+  color: #8a8aee;
+  text-decoration: none;
+}
+.readme a:hover {
+  color: #aaaaff;
+  text-decoration: underline;
+}
+.readme em {
+  color: #c0b8d8;
+  font-style: italic;
 }

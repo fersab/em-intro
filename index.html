@@ -65,29 +65,84 @@
   fetch('README.md').then(function(r){return r.text()}).then(function(md){
     var el = document.getElementById('readme');
     if (!el || !md) return;
-    // minimal markdown to HTML
-    var html = md
-      // code blocks
-      .replace(/```(\w*)\n([\s\S]*?)```/g, function(m,lang,code){
-        return '<pre><code>'+code.replace(/</g,'&lt;')+'</code></pre>';
-      })
-      // inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // headings
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // ordered list items
-      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
-      // unordered list items
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      // paragraphs (double newline)
-      .replace(/\n\n/g, '</p><p>')
-      // single newlines inside paragraphs
-      .replace(/\n/g, ' ');
-    el.innerHTML = '<p>' + html + '</p>';
+
+    // extract code blocks first, replace with placeholders
+    var codeBlocks = [];
+    md = md.replace(/```(\w*)\n([\s\S]*?)```/g, function(m, lang, code) {
+      var i = codeBlocks.length;
+      codeBlocks.push('<pre><code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre>');
+      return '\n\nCODEBLOCK_' + i + '\n\n';
+    });
+
+    // split into blocks by double newline
+    var blocks = md.split(/\n\n+/);
+    var html = '';
+
+    for (var b = 0; b < blocks.length; b++) {
+      var block = blocks[b].trim();
+      if (!block) continue;
+
+      // code block placeholder
+      var cbMatch = block.match(/^CODEBLOCK_(\d+)$/);
+      if (cbMatch) {
+        html += codeBlocks[parseInt(cbMatch[1])];
+        continue;
+      }
+
+      // heading
+      if (/^#{1,3} /.test(block)) {
+        var lvl = block.match(/^(#+)/)[1].length;
+        var text = block.replace(/^#+\s+/, '');
+        text = inlineFormat(text);
+        html += '<h' + lvl + '>' + text + '</h' + lvl + '>';
+        continue;
+      }
+
+      // list block (unordered or ordered)
+      if (/^[-*] /.test(block) || /^\d+\.\s/.test(block)) {
+        var lines = block.split('\n');
+        var items = [];
+        var cur = '';
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (/^[-*] /.test(line) || /^\d+\.\s/.test(line)) {
+            if (cur) items.push(cur);
+            cur = line.replace(/^[-*] /, '').replace(/^\d+\.\s+/, '');
+          } else {
+            // continuation line
+            cur += ' ' + line.trim();
+          }
+        }
+        if (cur) items.push(cur);
+        var tag = /^\d+\.\s/.test(block) ? 'ol' : 'ul';
+        html += '<' + tag + '>';
+        for (var j = 0; j < items.length; j++) {
+          html += '<li>' + inlineFormat(items[j]) + '</li>';
+        }
+        html += '</' + tag + '>';
+        continue;
+      }
+
+      // paragraph
+      var text = block.replace(/\n/g, ' ');
+      html += '<p>' + inlineFormat(text) + '</p>';
+    }
+
+    el.innerHTML = html;
+
+    function inlineFormat(s) {
+      return s
+        // inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // bold
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // italic
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        // links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        // -- to em dash
+        .replace(/ -- /g, ' \u2014 ');
+    }
   });
   </script>
 </body>
