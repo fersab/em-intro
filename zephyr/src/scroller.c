@@ -9,8 +9,13 @@
 #include <math.h>
 #include <string.h>
 
+#define SCROLL_WAVE_SPEED  3.0f    // temporal speed of sine wave
+#define SCROLL_WAVE_FREQ   0.02f   // spatial frequency of sine wave
+#define SCROLL_WAVE_AMP    12.0f   // vertical amplitude in pixels
+#define SCROLL_MAX_TEXT    512
+
 // static buffer for padded text
-static char scroller_textbuf[512];
+static char scroller_textbuf[SCROLL_MAX_TEXT];
 
 // create a tiling scroller state: pads text with spaces for seamless wrap
 void scroller_create(scroller_t *s, const char *text, float speed, int y)
@@ -22,7 +27,7 @@ void scroller_create(scroller_t *s, const char *text, float speed, int y)
     int text_len = (int)strlen(text);
 
     // copy text + padding into static buffer
-    if (text_len + pad_count >= (int)sizeof(scroller_textbuf)) {
+    if (text_len + pad_count >= SCROLL_MAX_TEXT) {
         text_len = (int)sizeof(scroller_textbuf) - pad_count - 1;
     }
     memcpy(scroller_textbuf, text, text_len);
@@ -55,7 +60,7 @@ void scroller_draw(const scroller_t *s, float time_now)
             float cx = x0 + i * s->step;
             if (cx >= SCREEN_W) break;
             if (cx < -FONT_GLYPH_W) continue;
-            int cy = (int)(s->y + sinf(time_now * 3.0f + cx * 0.02f) * 12.0f);
+            int cy = (int)(s->y + sinf(time_now * SCROLL_WAVE_SPEED + cx * SCROLL_WAVE_FREQ) * SCROLL_WAVE_AMP);
             font_draw_char((int)(unsigned char)s->text[i], (int)cx, cy);
         }
         x0 += s->tile_w;

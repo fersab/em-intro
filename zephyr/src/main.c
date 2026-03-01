@@ -55,7 +55,7 @@ static void draw(void)
         fire_draw();
     }
     floor_draw();
-    logo_draw(time_now);
+    logo_draw();
     if (scroller_active) {
         scroller_draw(&scroller, time_now);
     }

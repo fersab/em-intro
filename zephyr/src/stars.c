@@ -2,6 +2,7 @@
 
 #include "stars.h"
 #include "graph.h"
+#include "prng.h"
 
 #define NUM_STARS   200
 #define NUM_LAYERS  3
@@ -13,13 +14,11 @@ static uint8_t star_layer[NUM_STARS];
 static const float layer_speed[NUM_LAYERS] = { 20.0f, 50.0f, 90.0f };
 static uint16_t layer_color[NUM_LAYERS];
 
-// simple LCG PRNG for star positions
 static uint32_t star_rng = 54321;
 
-static float star_randf(void)
+static inline float star_randf(void)
 {
-    star_rng = star_rng * 1664525u + 1013904223u;
-    return (float)(star_rng >> 16) / 65536.0f;
+    return (float)lcg_next(&star_rng) / 65536.0f;
 }
 
 // pre-compute layer colors and randomize star positions

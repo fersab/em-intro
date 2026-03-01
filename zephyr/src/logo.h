@@ -10,7 +10,7 @@ void logo_init(void);
 void logo_update(float dt);
 
 // render logo: particles during convergence, sprite + shake after
-void logo_draw(float time_now);
+void logo_draw(void);
 
 // true when convergence + wave animation has finished
 bool logo_is_done(void);

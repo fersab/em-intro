@@ -2,22 +2,17 @@
 
 #include "fire.h"
 #include "graph.h"
+#include "prng.h"
 #include <string.h>
 
 #define FIRE_H_SIZE  42
 #define FIRE_TOP_Y   (HORIZON_Y - 40)
+#define FIRE_COOLING 4
 
 static uint8_t fire_buf[SCREEN_W * FIRE_H_SIZE];
 static uint16_t fire_pal[256];
 
-// simple LCG PRNG for fire seeding
 static uint32_t fire_rng = 12345;
-
-static inline uint8_t fire_rand_byte(void)
-{
-    fire_rng = fire_rng * 1664525u + 1013904223u;
-    return (uint8_t)(fire_rng >> 16);
-}
 
 // build fire palette: black -> red -> yellow -> white (256 entries)
 void fire_init(void)
@@ -39,8 +34,8 @@ void fire_update(void)
 {
     // seed bottom two rows
     for (int x = 0; x < SCREEN_W; x++) {
-        fire_buf[(FIRE_H_SIZE - 1) * SCREEN_W + x] = fire_rand_byte();
-        fire_buf[(FIRE_H_SIZE - 2) * SCREEN_W + x] = fire_rand_byte();
+        fire_buf[(FIRE_H_SIZE - 1) * SCREEN_W + x] = (uint8_t)lcg_next(&fire_rng);
+        fire_buf[(FIRE_H_SIZE - 2) * SCREEN_W + x] = (uint8_t)lcg_next(&fire_rng);
     }
 
     // average 4 neighbors, propagate upward
@@ -54,7 +49,7 @@ void fire_update(void)
                     + fire_buf[(y + 1) * SCREEN_W + xr]
                     + fire_buf[(y + 2) * SCREEN_W + x];
 
-            int val = (sum >> 2) - 4;
+            int val = (sum >> 2) - FIRE_COOLING;
             if (val < 0) val = 0;
             fire_buf[y * SCREEN_W + x] = (uint8_t)val;
         }

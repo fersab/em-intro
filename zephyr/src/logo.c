@@ -19,6 +19,17 @@
 #define LOGO_SHAKE_INTERVAL 10.0f
 #define LOGO_SHAKE_DURATION 0.8f
 #define LOGO_SHAKE_AMP      6.0f
+#define LOGO_SHAKE_FREQ     0.15f   // spatial frequency of shake sine
+#define LOGO_SHAKE_SPEED    8.0f    // temporal speed of shake sine
+
+// display scale
+#define LOGO_SCALE          0.5f    // fraction of screen width
+#define LOGO_Y_OFFSET       20      // pixels below vertical center
+
+// convergence wave tuning
+#define LOGO_CONV_SPEED     4.0f    // temporal speed of convergence wave
+#define LOGO_CONV_FREQ      0.05f   // spatial frequency of convergence wave
+#define LOGO_CONV_DITHER    0.001f  // per-particle phase offset
 
 static sprite_t logo_sprite;
 static bool logo_ready = false;
@@ -44,10 +55,10 @@ static int logo_num = 0;
 // scale logo, extract non-transparent pixels into particle arrays
 static void logo_build_particles(void)
 {
-    logo_dw = (int)(SCREEN_W * 0.5f);
+    logo_dw = (int)(SCREEN_W * LOGO_SCALE);
     logo_dh = logo_dw * logo_sprite.h / logo_sprite.w;
     logo_dx = (SCREEN_W - logo_dw) / 2;
-    logo_dy = (SCREEN_H - logo_dh) / 2 + 20;
+    logo_dy = (SCREEN_H - logo_dh) / 2 + LOGO_Y_OFFSET;
 
     // count non-transparent pixels at display resolution
     int count = 0;
@@ -146,7 +157,7 @@ void logo_update(float dt)
 }
 
 // render logo: particles during convergence, sprite + shake after
-void logo_draw(float time_now)
+void logo_draw(void)
 {
     if (!logo_ready) return;
 
@@ -161,7 +172,7 @@ void logo_draw(float time_now)
                 int sy = logo_dy + y;
                 if ((unsigned)sy >= SCREEN_H) continue;
                 int src_y = y * logo_sprite.h / logo_dh;
-                int ox = (int)(shake * sinf(sy * 0.15f + logo_time * 8.0f));
+                int ox = (int)(shake * sinf(sy * LOGO_SHAKE_FREQ + logo_time * LOGO_SHAKE_SPEED));
                 int fb_row = sy * SCREEN_W;
                 for (int x = 0; x < logo_dw; x++) {
                     int sx = logo_dx + x + ox;
@@ -182,12 +193,12 @@ void logo_draw(float time_now)
     if (t > 1.0f) t = 1.0f;
     float e = t * (2.0f - t);
     float amp = logo_wave_amp();
-    float phase = logo_time * 4.0f;
+    float phase = logo_time * LOGO_CONV_SPEED;
 
     for (int i = 0; i < logo_num; i++) {
         float x = logo_sx[i] + (logo_ex[i] - logo_sx[i]) * e;
         float y = logo_sy[i] + (logo_ey[i] - logo_sy[i]) * e;
-        float wave = amp * sinf(y * 0.05f + phase + i * 0.001f);
+        float wave = amp * sinf(y * LOGO_CONV_FREQ + phase + i * LOGO_CONV_DITHER);
         putpixel((int)(x + wave), (int)y, logo_color[i]);
     }
 }

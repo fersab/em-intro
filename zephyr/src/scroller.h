@@ -1,8 +1,6 @@
 #ifndef SCROLLER_H
 #define SCROLLER_H
 
-#include <stdbool.h>
-
 typedef struct {
     const char *text;
     int text_len;
