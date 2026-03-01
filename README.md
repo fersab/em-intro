@@ -15,6 +15,35 @@ the browser. Both produce the same demo -- stars, fire, checkerboard floor, logo
 convergence, and a chrome sine scroller -- but from completely different codebases that
 share the same architecture.
 
+## Prerequisites
+
+The JS6 version runs in any browser with no build step. To build the C-Version (WASM)
+or work with the full toolchain, you need:
+
+**All platforms:**
+- **Git** -- to clone the repo and the Emscripten SDK
+- **Python 3** -- for the dev server and the `png2rgb565.py` logo converter
+- **Bash** -- all scripts use `#!/usr/bin/env bash`
+
+**macOS:**
+- **Homebrew** -- used by `scripts/setup.sh` to install missing packages
+- Xcode Command Line Tools (`xcode-select --install`) for `git` and `make`
+
+**Linux (Debian/Ubuntu):**
+- `sudo apt-get install git python3 python3-pip build-essential`
+
+**Linux (Fedora):**
+- `sudo dnf install git python3 python3-pip make`
+
+**Linux (Arch):**
+- `sudo pacman -S git python python-pip make`
+
+**Optional (for bare-metal STM32 build only):**
+- Zephyr SDK and `west` -- see [C-Version / Zephyr](#c-version-zephyr-bare-metal)
+
+Once prerequisites are in place, `scripts/setup.sh` handles the rest (Emscripten SDK,
+Python Pillow library).
+
 ## Quick Start
 
 ```sh
@@ -27,6 +56,7 @@ Or using make: `make setup && make build && make serve`
 
 ## Contents
 
+- [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Two Codebases, One Architecture](#two-codebases-one-architecture)
 - [What You See](#what-you-see)
