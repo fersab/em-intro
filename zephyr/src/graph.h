@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 
+// place large buffers in external SDRAM on Zephyr, regular memory elsewhere
+#if defined(__EMSCRIPTEN__) || defined(SYNTAX_CHECK)
+#define SDRAM_BSS
+#else
+#define SDRAM_BSS __attribute__((section(".sdram_bss")))
+#endif
+
 // --- resolution (change these!) ---
 #define SCREEN_W  480
 #define SCREEN_H  272
@@ -33,5 +40,10 @@ void fb_clear(uint16_t color);
 
 // present back buffer to display, swap buffers
 void fb_swap(void);
+
+#ifdef __EMSCRIPTEN__
+// get pointer to RGBA32 canvas buffer (Emscripten only)
+uint8_t *graph_get_canvas_buf(void);
+#endif
 
 #endif

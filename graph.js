@@ -1,4 +1,4 @@
-// --- screen setup (resolution set in main.js) ---
+// --- screen setup and framebuffer ---
 const canvas = document.getElementById("screen");
 canvas.width = SCREEN_W;
 canvas.height = SCREEN_H;

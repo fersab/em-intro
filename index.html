@@ -6,6 +6,14 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <script>var DEMO_MODE = new URLSearchParams(location.search).get('mode') === 'wasm' ? 'wasm' : 'js';</script>
+
+  <div class="mode-tabs">
+    <a class="mode-tab" id="tab-js" href="?mode=js">JS6</a>
+    <a class="mode-tab" id="tab-wasm" href="?mode=wasm">C-Version (WASM)</a>
+  </div>
+  <script>document.getElementById('tab-' + DEMO_MODE).classList.add('active');</script>
+
   <div class="hint">Press play below to hear some nice chiptunes</div>
   <div class="monitor">
     <div class="vents">
@@ -43,23 +51,56 @@
 
   <article class="readme" id="readme"></article>
 
-  <!-- libs -->
-  <script>var libopenmpt = { locateFile: function(s) { return 'lib/' + s; } };</script>
-  <script src="lib/libopenmpt.js"></script>
-  <script src="lib/chiptune2.js"></script>
+  <script>
+  // load a script tag, call cb when done
+  function loadScript(src, cb) {
+    var s = document.createElement('script');
+    s.src = src;
+    if (cb) s.onload = cb;
+    document.body.appendChild(s);
+  }
 
-  <!-- demo -->
-  <script src="main.js"></script>
-  <script src="graph.js"></script>
-  <script src="font.js"></script>
-  <script src="sprite.js"></script>
-  <script src="floor.js"></script>
-  <script src="fire.js"></script>
-  <script src="stars.js"></script>
-  <script src="logo.js"></script>
-  <script src="scroller.js"></script>
-  <script src="mod.js"></script>
-  <script>main_start();</script>
+  // load scripts in sequence, call cb when all done
+  function loadScriptsSeq(srcs, cb) {
+    (function next(i) {
+      if (i >= srcs.length) { if (cb) cb(); return; }
+      loadScript(srcs[i], function() { next(i + 1); });
+    })(0);
+  }
+
+  // load audio libs (libopenmpt + chiptune2) then mod player
+  function loadAudio() {
+    var cfg = document.createElement('script');
+    cfg.textContent = 'var libopenmpt={locateFile:function(s){return"lib/"+s}};';
+    document.body.appendChild(cfg);
+    loadScriptsSeq(['lib/libopenmpt.js', 'lib/chiptune2.js', 'mod.js']);
+  }
+
+  if (DEMO_MODE === 'js') {
+    // --- JS mode: load audio libs synchronously, then effect scripts ---
+    document.write('<script>var libopenmpt={locateFile:function(s){return"lib/"+s}}<\/script>');
+    document.write('<script src="lib/libopenmpt.js"><\/script>');
+    document.write('<script src="lib/chiptune2.js"><\/script>');
+    loadScriptsSeq([
+      'main.js','graph.js','font.js','sprite.js',
+      'floor.js','fire.js','stars.js','logo.js','scroller.js','mod.js'
+    ], function() { main_start(); });
+  } else {
+    // --- WASM mode: load Emscripten-compiled C code, then audio ---
+    var cv = document.getElementById('screen');
+    cv.width = 480;
+    cv.height = 272;
+    loadScript('zephyr/web/demo.js', function() {
+      createDemo({
+        canvas: document.getElementById('screen'),
+        locateFile: function(path) { return 'zephyr/web/' + path; },
+        print: function(text) { console.log(text); },
+        printErr: function(text) { console.warn(text); }
+      }).then(loadAudio);
+    });
+  }
+  </script>
+
   <script>
   // load README.md and render as HTML below the monitor
   fetch('README.md').then(function(r){return r.text()}).then(function(md){

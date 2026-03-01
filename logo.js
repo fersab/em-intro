@@ -1,4 +1,4 @@
-// --- logo ---
+// --- logo particle animation ---
 let logo = null;
 let logo_ready = false;
 let logo_time = 0.0;
@@ -28,7 +28,7 @@ let logo_color = null;
 
 // load logo image and kick off particle setup
 function logo_init() {
-  sprite_load("logo.png?t=" + Date.now(), function(spr) {
+  sprite_load("logo.png", function(spr) {
     logo = spr;
     logo_build_particles();
   });

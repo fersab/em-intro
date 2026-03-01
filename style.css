@@ -16,6 +16,37 @@ body {
   margin-bottom: 10px;
 }
 
+/* --- mode toggle tabs --- */
+.mode-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+.mode-tab {
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 18px;
+  border: none;
+  cursor: pointer;
+  background: #3a3a50;
+  color: #6a6a8a;
+  border-radius: 4px 4px 0 0;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+.mode-tab:hover {
+  background: #4a4a60;
+  color: #9a9ab0;
+}
+.mode-tab.active {
+  background: #c8c0b0;
+  color: #2a2820;
+  cursor: default;
+  font-weight: bold;
+}
+
 /* --- CRT monitor shell --- */
 .monitor {
   background: linear-gradient(160deg, #c8c0b0, #a89880, #8a7e6e);
@@ -42,6 +73,7 @@ body {
 /* the canvas itself */
 canvas {
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
   display: block;
   border-radius: 4px;
 }

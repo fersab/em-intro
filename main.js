@@ -1,3 +1,5 @@
+// --- em-intro demoscene demo ---
+
 // --- resolution (change these!) ---
 const SCREEN_W = 480;
 const SCREEN_H = 272;
@@ -10,9 +12,8 @@ let time_last = 0;
 let dt = 0;
 
 // --- scene config ---
-const SCROLL_TEXT_DEFAULT = "GREETINGS FROM THE CODERS OF TOMORROW ... THIS INTRO WAS CRAFTED BY A HUMAN AND AN AI WORKING TOGETHER ... NO PIXELS WERE HARMED IN THE MAKING OF THIS DEMO ... RESPECT TO ALL OLDSCHOOL SCENERS OUT THERE ...";
 const SCROLL_TEXT = new URLSearchParams(window.location.search).get("text")
-  || SCROLL_TEXT_DEFAULT;
+  || "GREETINGS FROM THE CODERS OF TOMORROW ... THIS INTRO WAS CRAFTED BY A HUMAN AND AN AI WORKING TOGETHER ... NO PIXELS WERE HARMED IN THE MAKING OF THIS DEMO ... RESPECT TO ALL OLDSCHOOL SCENERS OUT THERE ...";
 const SCROLL_SPEED = 50.0;
 const SCROLL_Y = 24;
 let scroller = null;

@@ -1,0 +1,35 @@
+# Emscripten build — compile C effects to WebAssembly
+# Usage:  cd zephyr && make -f Makefile.web
+# Output: web/demo.js + web/demo.wasm
+
+CC      = emcc
+CFLAGS  = -O2 -std=c11 -Wall -Wextra -I src
+LDFLAGS = -s WASM=1 \
+          -s ALLOW_MEMORY_GROWTH=1 \
+          -s MODULARIZE=1 \
+          -s EXPORT_NAME='createDemo' \
+          -s EXPORTED_FUNCTIONS="['_main','_graph_get_canvas_buf']" \
+          -s EXPORTED_RUNTIME_METHODS="['HEAPU8']" \
+          -lm
+
+SRCS    = src/main.c src/graph.c src/font.c src/sprite.c \
+          src/fire.c src/floor.c src/stars.c src/logo.c src/scroller.c
+
+OUTDIR  = web
+OUT     = $(OUTDIR)/demo.js
+
+all: $(OUT)
+
+$(OUTDIR):
+	mkdir -p $(OUTDIR)
+
+$(OUT): $(SRCS) | $(OUTDIR)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SRCS) -o $(OUT)
+	@echo ""
+	@echo "Build complete: $(OUTDIR)/demo.js + $(OUTDIR)/demo.wasm"
+	@echo "Serve with: python3 -m http.server 8000 --directory $(OUTDIR)"
+
+clean:
+	rm -f $(OUTDIR)/demo.js $(OUTDIR)/demo.wasm
+
+.PHONY: all clean

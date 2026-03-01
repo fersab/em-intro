@@ -41,14 +41,14 @@ static int logo_dh = 0;
 static int logo_dx = 0;
 static int logo_dy = 0;
 
-// particle arrays in SDRAM (struct-of-arrays)
+// particle arrays (SDRAM on Zephyr, regular memory on Emscripten)
 #define MAX_LOGO_PARTICLES 40000
 
-static float logo_sx[MAX_LOGO_PARTICLES] __attribute__((section(".sdram_bss")));
-static float logo_sy[MAX_LOGO_PARTICLES] __attribute__((section(".sdram_bss")));
-static float logo_ex[MAX_LOGO_PARTICLES] __attribute__((section(".sdram_bss")));
-static float logo_ey[MAX_LOGO_PARTICLES] __attribute__((section(".sdram_bss")));
-static uint16_t logo_color[MAX_LOGO_PARTICLES] __attribute__((section(".sdram_bss")));
+static float logo_sx[MAX_LOGO_PARTICLES] SDRAM_BSS;
+static float logo_sy[MAX_LOGO_PARTICLES] SDRAM_BSS;
+static float logo_ex[MAX_LOGO_PARTICLES] SDRAM_BSS;
+static float logo_ey[MAX_LOGO_PARTICLES] SDRAM_BSS;
+static uint16_t logo_color[MAX_LOGO_PARTICLES] SDRAM_BSS;
 
 static int logo_num = 0;
 

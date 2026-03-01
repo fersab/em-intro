@@ -1,6 +1,13 @@
-// --- em-intro demoscene demo — Zephyr / STM32H747I-DISCO ---
+// --- em-intro demoscene demo ---
+// Zephyr build: STM32H747I-DISCO bare metal
+// Emscripten build: browser via WebAssembly
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#else
 #include <zephyr/kernel.h>
+#endif
 
 #include "graph.h"
 #include "font.h"
@@ -61,7 +68,67 @@ static void draw(void)
     }
 }
 
-// initialize all effects and run the main loop
+// === Emscripten main loop ===
+#ifdef __EMSCRIPTEN__
+
+// JS-side function to blit the RGBA buffer to canvas
+EM_JS(void, js_blit_canvas, (const uint8_t *buf, int w, int h), {
+    var canvas = document.getElementById('screen')
+              || document.getElementById('c');
+    if (!canvas) { console.error('no canvas found'); return; }
+    var ctx = canvas.getContext('2d');
+    var img = ctx.createImageData(w, h);
+    img.data.set(HEAPU8.subarray(buf, buf + w * h * 4));
+    ctx.putImageData(img, 0, 0);
+});
+
+static double last_time = 0.0;
+
+static void em_frame(void)
+{
+    double now = emscripten_get_now() / 1000.0;
+    dt = (float)(now - last_time);
+    last_time = now;
+
+    // clamp dt to avoid huge jumps
+    if (dt > 0.1f) dt = 0.1f;
+
+    time_now += dt;
+
+    // create scroller once logo animation is done
+    if (!scroller_active && logo_is_done()) {
+        scroller_create(&scroller, SCROLL_TEXT, SCROLL_SPEED, SCROLL_Y);
+        scroller_active = true;
+    }
+
+    update();
+    draw();
+    fb_swap();
+
+    // blit RGBA buffer to canvas
+    js_blit_canvas(graph_get_canvas_buf(), SCREEN_W, SCREEN_H);
+}
+
+int main(void)
+{
+    graph_init();
+    font_init();
+    fire_init();
+    floor_init();
+    stars_init();
+    logo_init();
+
+    last_time = emscripten_get_now() / 1000.0;
+
+    // 0 = use requestAnimationFrame, 1 = simulate infinite loop
+    emscripten_set_main_loop(em_frame, 0, 1);
+
+    return 0;
+}
+
+#else
+// === Zephyr main loop ===
+
 int main(void)
 {
     // initialize display
@@ -112,3 +179,5 @@ int main(void)
 
     return 0;
 }
+
+#endif

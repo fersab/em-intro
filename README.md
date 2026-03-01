@@ -1,7 +1,42 @@
 # EM Intro
 
-A retro demoscene intro that runs in the browser and on bare metal -- same effects, two platforms.
+A retro demoscene intro built three ways from one design:
 
+- **JS6** -- hand-written JavaScript in imperative C style. No frameworks, no classes, no
+  build step. Just flat arrays, `putpixel`, and `requestAnimationFrame`. Runs in any browser.
+- **C-Version (WASM)** -- the exact same C source files that run on bare-metal hardware,
+  compiled to WebAssembly with Emscripten. One codebase, two targets: a Zephyr RTOS board
+  and a browser tab.
+- **C/Zephyr** -- the native build. Same C code runs directly on an STM32H747I-DISCO
+  discovery board, rendering to a 480x272 TFT-LCD panel at 60fps under Zephyr RTOS.
+
+Toggle between the JS6 and C-Version (WASM) renderers using the tabs above the screen in
+the browser. Both produce the same demo -- stars, fire, checkerboard floor, logo particle
+convergence, and a chrome sine scroller -- but from completely different codebases that
+share the same architecture.
+
+## Two Codebases, One Architecture
+
+The JS6 and C versions are not ports of each other in the usual sense. They were written
+side by side with the same structure: same file names, same function names, same rendering
+pipeline. `stars.js` mirrors `stars.c`. `fire.js` mirrors `fire.c`. The JS code reads like
+C on purpose -- imperative, procedural, no OOP, no closures for state. If you can read one
+version, you can read the other.
+
+The C version has a trick: it compiles to two completely different targets from the same
+source files. On the STM32 board, it links against the Zephyr RTOS display API and runs on
+bare metal. In the browser, Emscripten compiles the same `.c` files to WebAssembly, and a
+thin platform bridge in `graph.c` swaps the display backend:
+
+- **Zephyr path:** `fb_swap()` calls `display_write()` to DMA the RGB565 framebuffer to
+  the LTDC controller. Framebuffers live in external SDRAM.
+- **Emscripten path:** `fb_swap()` expands RGB565 → RGBA32 into a canvas buffer. JavaScript
+  glue reads that buffer via `HEAPU8` and paints it to an HTML canvas with `putImageData`.
+
+That is the entire bridge. Every other line of C -- the fire algorithm, the starfield, the
+logo particle system, the font renderer, the floor, the scroller -- is identical across
+both targets. The `#ifdef __EMSCRIPTEN__` blocks are confined to `graph.c` (display init
+and swap) and `main.c` (frame loop and timing). Everything else is pure, portable C11.
 
 ## What You See
 
@@ -187,11 +222,13 @@ This layering means the floor naturally overlaps the base of the fire, the logo 
 top of the floor, and the scroller text floats above it all. No alpha blending, no
 z-buffer -- just careful ordering.
 
-## The C/Zephyr Port
+## The C-Version on Zephyr (Bare Metal)
 
-The C version targets the **STM32H747I-DISCO** discovery board, running on the Cortex-M7
-core under Zephyr RTOS. The board has a 480x272 TFT-LCD panel with an LTDC display
-controller -- the same native resolution the demo was designed for.
+The C code that compiles to WASM in the browser is the same code that runs natively on an
+**STM32H747I-DISCO** discovery board under Zephyr RTOS. The board has a 480x272 TFT-LCD
+panel with an LTDC display controller -- the same native resolution the demo was designed
+for. This is the original target: the Emscripten/WASM build is a zero-effort bonus you get
+from keeping the platform bridge thin.
 
 ### Hardware details
 
@@ -207,7 +244,7 @@ controller -- the same native resolution the demo was designed for.
 - **Double buffering:** Two framebuffers alternate via `fb_swap()`. One is written to by
   the effects while the other is being displayed, avoiding tearing.
 
-### Key differences from the JS version
+### Key differences from JS6
 
 - **No `Math.random()`:** The C version uses a simple LCG (linear congruential generator)
   PRNG for fire seeding and star positions. Deterministic and fast, no OS entropy needed.
@@ -226,7 +263,7 @@ controller -- the same native resolution the demo was designed for.
 
 ## Building and Running
 
-### Browser version
+### JS6 (browser -- no build step)
 
 No build step required. Serve the project root with any static HTTP server:
 
@@ -235,8 +272,9 @@ cd em-intro
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000` in a browser. The demo starts immediately. An optional MOD
-music player is included (press play in the UI).
+Open `http://localhost:8000` in a browser. The demo starts in JS6 mode by default. Use
+the toggle tabs above the screen to switch between the JS6 and C-Version (WASM)
+renderers. An optional MOD music player is included (press play in the UI).
 
 You can customize the scroller text with a query parameter:
 
@@ -244,7 +282,38 @@ You can customize the scroller text with a query parameter:
 http://localhost:8000?text=HELLO+WORLD
 ```
 
-### C/Zephyr version
+### C-Version / WASM (browser -- same C source, compiled with Emscripten)
+
+The same C source files that run on bare-metal Zephyr are compiled to WebAssembly. No
+wrapper code, no separate browser port -- the actual `fire.c`, `stars.c`, `logo.c`, etc.
+are fed to `emcc` and the platform bridge in `graph.c` handles the rest.
+
+1. **Install Emscripten** (if not already done):
+
+```sh
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk && ./emsdk install latest && ./emsdk activate latest
+source ./emsdk_env.sh
+```
+
+2. **Build with make:**
+
+```sh
+cd zephyr
+make -f Makefile.web
+```
+
+This produces `web/demo.js` and `web/demo.wasm`.
+
+3. **Run:** Serve the project root the same way as JS6. Click the **C-Version (WASM)**
+tab above the screen, or navigate directly to `http://localhost:8000?mode=wasm`. The C
+code runs as WebAssembly at near-native speed, using `requestAnimationFrame` for 60fps
+frame pacing.
+
+A standalone page at `zephyr/web/index.html` is also included for testing the WASM build
+in isolation.
+
+### C-Version / Zephyr (bare metal)
 
 Requires a Zephyr SDK installation and the STM32H747I-DISCO board.
 
@@ -353,16 +422,16 @@ static inline int display_write(const struct device *d, int x, int y, const stru
 STUB
 ```
 
-Then syntax-check all source files (ignoring macOS-specific `.sdram_bss` section errors,
-which are an ELF feature not supported by Mach-O):
+Then syntax-check all source files. The `-DSYNTAX_CHECK` flag tells `graph.h` to skip
+the `__attribute__((section))` annotation, which is ARM/ELF-only and would fail on macOS:
 
 ```sh
 cd zephyr
 for f in src/*.c; do
   echo "--- $f ---"
-  cc -fsyntax-only -std=c11 -I src -I /tmp/zstubs \
+  cc -fsyntax-only -std=c11 -DSYNTAX_CHECK -I src -I /tmp/zstubs \
     -include stdint.h -include stdbool.h -include math.h -include string.h \
-    "$f" 2>&1 | grep -v "sdram_bss\|mach-o section"
+    "$f"
 done
 ```
 
