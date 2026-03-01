@@ -39,6 +39,8 @@
     </div>
   </div>
 
+  <article class="readme" id="readme"></article>
+
   <!-- libs -->
   <script>var libopenmpt = { locateFile: function(s) { return 'lib/' + s; } };</script>
   <script src="lib/libopenmpt.js"></script>
@@ -56,5 +58,35 @@
   <script src="scroller.js"></script>
   <script src="mod.js"></script>
   <script>main_start();</script>
+  <script>
+  // load README.md and render as HTML below the monitor
+  fetch('README.md').then(function(r){return r.text()}).then(function(md){
+    var el = document.getElementById('readme');
+    if (!el || !md) return;
+    // minimal markdown to HTML
+    var html = md
+      // code blocks
+      .replace(/```(\w*)\n([\s\S]*?)```/g, function(m,lang,code){
+        return '<pre><code>'+code.replace(/</g,'&lt;')+'</code></pre>';
+      })
+      // inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // headings
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      // bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // ordered list items
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+      // unordered list items
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      // paragraphs (double newline)
+      .replace(/\n\n/g, '</p><p>')
+      // single newlines inside paragraphs
+      .replace(/\n/g, ' ');
+    el.innerHTML = '<p>' + html + '</p>';
+  });
+  </script>
 </body>
 </html>
