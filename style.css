@@ -210,6 +210,19 @@ canvas {
   text-shadow: 0 0 6px rgba(51, 204, 51, 0.5);
 }
 
+/* --- github link --- */
+.github-link {
+  color: #5a5a7a;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-top: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.github-link:hover {
+  color: #8a8aaa;
+}
+
 /* --- readme below the monitor --- */
 .readme {
   max-width: 680px;
