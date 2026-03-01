@@ -134,31 +134,40 @@
       if (/^#{1,3} /.test(block)) {
         var lvl = block.match(/^(#+)/)[1].length;
         var text = block.replace(/^#+\s+/, '');
+        var id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         text = inlineFormat(text);
-        html += '<h' + lvl + '>' + text + '</h' + lvl + '>';
+        html += '<h' + lvl + ' id="' + id + '">' + text + '</h' + lvl + '>';
         continue;
       }
 
-      // list block (unordered or ordered)
+      // list block (unordered or ordered, one level of nesting)
       if (/^[-*] /.test(block) || /^\d+\.\s/.test(block)) {
         var lines = block.split('\n');
+        var tag = /^\d+\.\s/.test(block) ? 'ol' : 'ul';
         var items = [];
-        var cur = '';
+        var cur = null;
         for (var i = 0; i < lines.length; i++) {
           var line = lines[i];
           if (/^[-*] /.test(line) || /^\d+\.\s/.test(line)) {
-            if (cur) items.push(cur);
-            cur = line.replace(/^[-*] /, '').replace(/^\d+\.\s+/, '');
-          } else {
-            // continuation line
-            cur += ' ' + line.trim();
+            cur = { text: line.replace(/^[-*] /, '').replace(/^\d+\.\s+/, ''), children: [] };
+            items.push(cur);
+          } else if (/^ +[-*] /.test(line) && cur) {
+            cur.children.push(line.replace(/^ +[-*] /, ''));
+          } else if (cur) {
+            cur.text += ' ' + line.trim();
           }
         }
-        if (cur) items.push(cur);
-        var tag = /^\d+\.\s/.test(block) ? 'ol' : 'ul';
         html += '<' + tag + '>';
         for (var j = 0; j < items.length; j++) {
-          html += '<li>' + inlineFormat(items[j]) + '</li>';
+          html += '<li>' + inlineFormat(items[j].text);
+          if (items[j].children.length > 0) {
+            html += '<ul>';
+            for (var k = 0; k < items[j].children.length; k++) {
+              html += '<li>' + inlineFormat(items[j].children[k]) + '</li>';
+            }
+            html += '</ul>';
+          }
+          html += '</li>';
         }
         html += '</' + tag + '>';
         continue;

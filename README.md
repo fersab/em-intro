@@ -15,6 +15,29 @@ the browser. Both produce the same demo -- stars, fire, checkerboard floor, logo
 convergence, and a chrome sine scroller -- but from completely different codebases that
 share the same architecture.
 
+## Contents
+
+- [Two Codebases, One Architecture](#two-codebases-one-architecture)
+- [What You See](#what-you-see)
+- [From putpixel to Demo: A Walkthrough](#from-putpixel-to-demo-a-walkthrough)
+  - [1. The Framebuffer and putpixel](#1-the-framebuffer-and-putpixel)
+  - [2. The Starfield](#2-the-starfield)
+  - [3. The Checkerboard Floor](#3-the-checkerboard-floor)
+  - [4. The Fire Effect](#4-the-fire-effect)
+  - [5. The Procedural Chrome Font](#5-the-procedural-chrome-font)
+  - [6. The Sine Scroller](#6-the-sine-scroller)
+  - [7. The Logo Particle Convergence](#7-the-logo-particle-convergence)
+  - [8. The Sprite System](#8-the-sprite-system)
+- [How the Effects Layer Together](#how-the-effects-layer-together)
+- [The C-Version on Zephyr (Bare Metal)](#the-c-version-on-zephyr-bare-metal)
+- [Building and Running](#building-and-running)
+  - [JS6 (browser)](#js6-browser-no-build-step)
+  - [C-Version / WASM (browser)](#c-version-wasm-browser-same-c-source-compiled-with-emscripten)
+  - [C-Version / Zephyr (bare metal)](#c-version-zephyr-bare-metal)
+  - [Troubleshooting the C build](#troubleshooting-the-c-build)
+  - [Local syntax check](#local-syntax-check-no-zephyr-sdk-required)
+- [Credits](#credits)
+
 ## Two Codebases, One Architecture
 
 The JS6 and C versions are not ports of each other in the usual sense. They were written
