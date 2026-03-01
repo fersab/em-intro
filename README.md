@@ -321,6 +321,53 @@ DSI support on STM32H7 has historically required specific driver versions and
 configuration. If the parallel-RGB path works but DSI does not, check the Zephyr version
 and any known issues with the `st,stm32-ltdc` and DSI bridge drivers.
 
+### Local syntax check (no Zephyr SDK required)
+
+If you do not have a Zephyr SDK installed, you can still run a basic compilation test
+using your host C compiler. This catches syntax errors, type mismatches, undeclared
+identifiers, and redefined macros -- but not linker errors, ARM-specific issues, or
+Zephyr API misuse.
+
+Create minimal stub headers for the Zephyr includes:
+
+```sh
+mkdir -p /tmp/zstubs/zephyr/drivers
+cat > /tmp/zstubs/zephyr/kernel.h << 'STUB'
+typedef long long int64_t;
+static inline int64_t k_uptime_get(void){return 0;}
+static inline void k_msleep(int ms){}
+static inline void printk(const char *fmt,...){}
+STUB
+cat > /tmp/zstubs/zephyr/device.h << 'STUB'
+struct device;
+static inline int device_is_ready(const struct device *d){return 1;}
+STUB
+cat > /tmp/zstubs/zephyr/drivers/display.h << 'STUB'
+#define DT_CHOSEN(x) 0
+#define DEVICE_DT_GET(x) ((const struct device*)0)
+struct display_capabilities { int x_resolution; int y_resolution; };
+struct display_buffer_descriptor { int buf_size; int width; int height; int pitch; };
+static inline void display_blanking_off(const struct device *d){}
+static inline void display_get_capabilities(const struct device *d, struct display_capabilities *c){}
+static inline int display_write(const struct device *d, int x, int y, const struct display_buffer_descriptor *desc, const void *buf){return 0;}
+STUB
+```
+
+Then syntax-check all source files (ignoring macOS-specific `.sdram_bss` section errors,
+which are an ELF feature not supported by Mach-O):
+
+```sh
+cd zephyr
+for f in src/*.c; do
+  echo "--- $f ---"
+  cc -fsyntax-only -std=c11 -I src -I /tmp/zstubs \
+    -include stdint.h -include stdbool.h -include math.h -include string.h \
+    "$f" 2>&1 | grep -v "sdram_bss\|mach-o section"
+done
+```
+
+All files should report zero errors and zero warnings.
+
 ## Credits
 
 Built by a human and an AI, working together.
